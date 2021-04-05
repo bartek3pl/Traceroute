@@ -10,6 +10,6 @@ void log_receive_one_packet_debug_msg(u_int8_t *buffer,
 
 void log_average_time(int received, struct timeval *current_time);
 
-void log_router_addresses(int received, struct timeval *current_time);
+void log_time(int received, struct timeval *current_time);
 
-void log_senders(int received, char *senders_ip_text[3]);
+void log_receivers(int received, char receivers_ip_text[20][3]);

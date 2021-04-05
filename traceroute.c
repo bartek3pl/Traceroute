@@ -59,7 +59,7 @@ int wait_for_packet(int sockfd, struct timeval *tv)
 }
 
 /* Converts the address structure in sender to a string with an IP address */
-char sender_address_to_text(struct sockaddr_in *sender, char *sender_ip_text)
+int sender_address_to_text(struct sockaddr_in *sender, char *sender_ip_text)
 {
     const char *address_text_form = inet_ntop(
         AF_INET,             // IPv4 network address
@@ -73,8 +73,8 @@ char sender_address_to_text(struct sockaddr_in *sender, char *sender_ip_text)
         return EXIT_FAILURE;
     }
 
-    printf("%s\n", sender_ip_text);
-    return *sender_ip_text;
+    // printf("%s\n", sender_ip_text);
+    return 1;
 }
 
 /* Reads IP header */
@@ -93,7 +93,7 @@ struct icmphdr *read_icmp_header(u_int8_t *buffer, ssize_t ip_header_len)
 }
 
 /* Receives one data packet from socket */
-int receive_one_packet(int sockfd, int ttl)
+int receive_one_packet(int sockfd, int ttl, char receiver_ip_text[20])
 {
     struct sockaddr_in sender;
     socklen_t sender_len = sizeof(sender);
@@ -114,8 +114,7 @@ int receive_one_packet(int sockfd, int ttl)
         return EXIT_FAILURE;
     }
 
-    char sender_ip_text[20];
-    if (sender_address_to_text(&sender, sender_ip_text) == EXIT_FAILURE)
+    if (sender_address_to_text(&sender, receiver_ip_text) == EXIT_FAILURE)
     {
         return EXIT_FAILURE;
     }
@@ -127,7 +126,13 @@ int receive_one_packet(int sockfd, int ttl)
 
     // log_receive_one_packet_debug_msg(buffer, ip_header_len, packet_len);
 
-    if (icmp_header->type == ICMP_ECHOREPLY && WAS_RECENT(ttl, seq_number) && id == getpid())
+    if (icmp_header->type == ICMP_TIME_EXCEEDED)
+    {
+        return ICMP_TIME_EXCEEDED;
+    }
+    else if (icmp_header->type == ICMP_ECHOREPLY &&
+             WAS_RECENT(ttl, seq_number) &&
+             id == getpid())
     {
         return ICMP_ECHOREPLY;
     }
@@ -149,6 +154,7 @@ int receive_packets(int sockfd, int ttl)
     int receive_one_packet_status;
     int received = 0;
     int has_receiver_responded = 0;
+    char receivers_ip_text[20][ECHO_REQUESTS];
 
     struct timeval tv;
     struct timeval current_time;
@@ -160,13 +166,16 @@ int receive_packets(int sockfd, int ttl)
     while (received < ECHO_REQUESTS)
     {
         int wait_for_packet_status = wait_for_packet(sockfd, &current_time);
-        if (wait_for_packet_status == EXIT_FAILURE ||
-            wait_for_packet_status == TIMEOUT)
+        if (wait_for_packet_status == EXIT_FAILURE)
+        {
+            return EXIT_FAILURE;
+        }
+        if (wait_for_packet_status == TIMEOUT)
         {
             break;
         }
 
-        receive_one_packet_status = receive_one_packet(sockfd, ttl);
+        receive_one_packet_status = receive_one_packet(sockfd, ttl, receivers_ip_text[received]);
 
         if (receive_one_packet_status == ICMP_ECHOREPLY)
         {
@@ -181,9 +190,9 @@ int receive_packets(int sockfd, int ttl)
         received++;
     }
 
-    // log_receivers()
+    log_receivers(received, receivers_ip_text);
 
-    log_router_addresses(received, &current_time);
+    log_time(received, &current_time);
 
     return has_receiver_responded;
 }

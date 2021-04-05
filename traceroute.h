@@ -14,13 +14,13 @@ int create_socket();
 
 int wait_for_packet(int sockfd, struct timeval *tv);
 
-char sender_address_to_text(struct sockaddr_in *sender, char *sender_ip_text);
+int sender_address_to_text(struct sockaddr_in *sender, char *sender_ip_text);
 
 ssize_t read_ip_header(u_int8_t *buffer);
 
 struct icmphdr *read_icmp_header(u_int8_t *buffer, ssize_t ip_header_len);
 
-int receive_one_packet(int sockfd, int ttl);
+int receive_one_packet(int sockfd, int ttl, char *receiver_ip_text);
 
 void increase_current_time(struct timeval *tv, struct timeval *current_time);
 

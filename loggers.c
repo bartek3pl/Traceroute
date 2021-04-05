@@ -45,11 +45,11 @@ void log_average_time(int received, struct timeval *current_time)
     }
 
     int average = tv_usec_sum / 3000;
-    printf("%i ms\n", average);
+    printf("%ims\n", average);
 }
 
-/* Logs trace router address or logs average time */
-void log_router_addresses(int received, struct timeval *current_time)
+/* Logs average time of requests */
+void log_time(int received, struct timeval *current_time)
 {
     if (!received)
     {
@@ -65,23 +65,23 @@ void log_router_addresses(int received, struct timeval *current_time)
     }
 }
 
-/* Logs all senders of packet sent */
-void log_senders(int received, char *senders_ip_text[3])
+/* Logs all receivers of packet sent */
+void log_receivers(int received, char receivers_ip_text[20][3])
 {
     int is_unique;
-    char *sender;
-    char *another_sender;
+    char *receiver;
+    char *another_receiver;
 
     for (int i = 0; i < received; ++i)
     {
         is_unique = 1;
-        sender = senders_ip_text[i];
+        receiver = receivers_ip_text[i];
 
         for (int j = 0; j < i; ++j)
         {
-            another_sender = senders_ip_text[j];
+            another_receiver = receivers_ip_text[j];
 
-            if (!strcmp(sender, another_sender))
+            if (!strcmp(receiver, another_receiver))
             {
                 is_unique = 0;
                 break;
@@ -90,7 +90,7 @@ void log_senders(int received, char *senders_ip_text[3])
 
         if (is_unique)
         {
-            printf("%s ", sender);
+            printf("%s ", receiver);
         }
     }
 }
