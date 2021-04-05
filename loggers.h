@@ -12,4 +12,4 @@ void log_average_time(int received, struct timeval *current_time);
 
 void log_time(int received, struct timeval *current_time);
 
-void log_receivers(int received, char receivers_ip_text[20][3]);
+void log_receivers(int received, char *receivers_ip_text[20]);

@@ -34,4 +34,4 @@ ssize_t send_packet(int sockfd, struct icmp *header, struct sockaddr_in *recipie
 
 int set_socket_options(int sockfd, int current_ttl);
 
-void traceroute(int sockfd, struct sockaddr_in *recipient);
+int traceroute(int sockfd, struct sockaddr_in *recipient);

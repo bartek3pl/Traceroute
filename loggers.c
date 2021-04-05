@@ -51,46 +51,40 @@ void log_average_time(int received, struct timeval *current_time)
 /* Logs average time of requests */
 void log_time(int received, struct timeval *current_time)
 {
-    if (!received)
+    if (received == 3)
+    {
+        log_average_time(received, current_time);
+    }
+    else if (!received)
     {
         printf("*\n");
     }
-    else if (received < 3)
-    {
-        printf("???\n");
-    }
     else
     {
-        log_average_time(received, current_time);
+        printf("???\n");
     }
 }
 
 /* Logs all receivers of packet sent */
-void log_receivers(int received, char receivers_ip_text[20][3])
+void log_receivers(int received, char *receivers_ip_text[20])
 {
-    int is_unique;
-    char *receiver;
-    char *another_receiver;
+    int occurences;
 
     for (int i = 0; i < received; ++i)
     {
-        is_unique = 1;
-        receiver = receivers_ip_text[i];
+        occurences = 0;
 
-        for (int j = 0; j < i; ++j)
+        for (int j = i, n = received; j < n + 1; ++j)
         {
-            another_receiver = receivers_ip_text[j];
-
-            if (!strcmp(receiver, another_receiver))
+            if (i != j && receivers_ip_text[j] != NULL && !strcmp(receivers_ip_text[i], receivers_ip_text[j]))
             {
-                is_unique = 0;
-                break;
+                occurences++;
             }
         }
 
-        if (is_unique)
+        if (occurences == 0)
         {
-            printf("%s ", receiver);
+            printf("%s ", receivers_ip_text[i]);
         }
     }
 }

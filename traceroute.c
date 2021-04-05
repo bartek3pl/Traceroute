@@ -121,14 +121,23 @@ int receive_one_packet(int sockfd, int ttl, char receiver_ip_text[20])
 
     ssize_t ip_header_len = read_ip_header(buffer);
     struct icmphdr *icmp_header = read_icmp_header(buffer, ip_header_len);
-    int id = icmp_header->un.echo.id;
     int seq_number = icmp_header->un.echo.sequence;
+    int id = icmp_header->un.echo.id;
 
     // log_receive_one_packet_debug_msg(buffer, ip_header_len, packet_len);
 
     if (icmp_header->type == ICMP_TIME_EXCEEDED)
     {
-        return ICMP_TIME_EXCEEDED;
+        uint8_t *buffer = (uint8_t *)icmp_header + sizeof(struct icmphdr);
+        ip_header_len = read_ip_header(buffer);
+        icmp_header = read_icmp_header(buffer, ip_header_len);
+        seq_number = icmp_header->un.echo.sequence;
+        id = icmp_header->un.echo.id;
+
+        if (WAS_RECENT(ttl, seq_number) && id == getpid())
+        {
+            return ICMP_TIME_EXCEEDED;
+        }
     }
     else if (icmp_header->type == ICMP_ECHOREPLY &&
              WAS_RECENT(ttl, seq_number) &&
@@ -145,7 +154,7 @@ void increase_current_time(struct timeval *tv, struct timeval *current_time)
 {
     tv->tv_sec = MAX_WAITING_SECONDS;
     tv->tv_usec = 0;
-    timersub(tv, current_time, tv);
+    timersub(tv, current_time, current_time);
 }
 
 /* Waits and receives packets */
@@ -154,7 +163,12 @@ int receive_packets(int sockfd, int ttl)
     int receive_one_packet_status;
     int received = 0;
     int has_receiver_responded = 0;
-    char receivers_ip_text[20][ECHO_REQUESTS];
+
+    char receiver_ip_text_first[20];
+    char receiver_ip_text_second[20];
+    char receiver_ip_text_third[20];
+
+    char *receivers_ip_text[20];
 
     struct timeval tv;
     struct timeval current_time;
@@ -175,7 +189,21 @@ int receive_packets(int sockfd, int ttl)
             break;
         }
 
-        receive_one_packet_status = receive_one_packet(sockfd, ttl, receivers_ip_text[received]);
+        switch (received)
+        {
+        case 0:
+            receive_one_packet_status = receive_one_packet(sockfd, ttl, receiver_ip_text_first);
+            receivers_ip_text[0] = receiver_ip_text_first;
+            break;
+        case 1:
+            receive_one_packet_status = receive_one_packet(sockfd, ttl, receiver_ip_text_second);
+            receivers_ip_text[1] = receiver_ip_text_second;
+            break;
+        case 2:
+            receive_one_packet_status = receive_one_packet(sockfd, ttl, receiver_ip_text_third);
+            receivers_ip_text[2] = receiver_ip_text_third;
+            break;
+        }
 
         if (receive_one_packet_status == ICMP_ECHOREPLY)
         {
@@ -276,7 +304,7 @@ int set_socket_options(int sockfd, int current_ttl)
 */
 
 /* Runs traceroute */
-void traceroute(int sockfd, struct sockaddr_in *recipient)
+int traceroute(int sockfd, struct sockaddr_in *recipient)
 {
     struct icmp header;
     int seq_number;
@@ -307,7 +335,9 @@ void traceroute(int sockfd, struct sockaddr_in *recipient)
         receive_packets_status = receive_packets(sockfd, i);
         if (receive_packets_status)
         {
-            return;
+            return 0;
         }
     }
+
+    return 0;
 }
